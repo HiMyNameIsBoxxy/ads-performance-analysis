@@ -8,23 +8,15 @@
 
 <meta name="author" content="Huan Shuo Hsu, Jinyi Liu">
 
-<title>The Effectiveness of Digital Advertisement in Driving Customer Retention: A Quantitative Analysis of Digital Efficacy</title>
-<style>
-code{white-space: pre-wrap;}
-span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: min(4vw, 1.5em);}
-div.column{flex: auto; overflow-x: auto;}
-div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-ul.task-list{list-style: none;}
-ul.task-list li input[type="checkbox"] {
-  width: 0.8em;
-  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
-  vertical-align: middle;
-}
 
 <link href="statistical_research_readme_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="statistical_research_readme_files/libs/bootstrap/bootstrap-973236bd072d72a04ee9cd82dcc9cb29.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">The Effectiveness of Digital Advertisement in Driving Customer Retention: A Quantitative Analysis of Digital Efficacy</h1>
+</div>
 
 </head>
 
@@ -122,10 +114,7 @@ ul.task-list li input[type="checkbox"] {
 </div>
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default">
-<div class="quarto-title">
-<h1 class="title">The Effectiveness of Digital Advertisement in Driving Customer Retention: A Quantitative Analysis of Digital Efficacy</h1>
-</div>
+
 
   
 
