@@ -1,0 +1,616 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-12-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Simulation
+
+### Q1 No Effect
+
+```{r}
+# Load libraries
+library(data.table)
+library(DT)
+library(ggplot2)
+
+# Set parameters
+set.seed(123)  # Set seed for reproducibility
+n <- 800  # Sample size (400 per group)
+sd_sales <- 500  # Standard deviation
+alpha <- 0.05  # Significance level
+
+# Function to simulate multiple experiments
+generate_multiple_experiments <- function(effect_size, num_experiments = 1000, alpha = 0.05) {
+  # Initialize storage for all experiments
+  all_results <- data.table(
+    Experiment_ID = integer(),
+    Effect = numeric(),
+    P_value = numeric(),
+    CI_Lower = numeric(),
+    CI_Upper = numeric()
+  )
+  
+  false_positives <- 0
+  true_negatives <- 0
+  
+  # Run multiple experiments
+  for (i in 1:num_experiments) {
+    # Generate data for Treatment and Control groups
+    treatment_sales <- rnorm(n / 2, mean = 1000 + effect_size, sd = sd_sales)
+    control_sales <- rnorm(n / 2, mean = 1000, sd = sd_sales)
+    
+    # Perform Welch's t-test
+    t_test <- t.test(treatment_sales, control_sales)
+    
+    # Store results
+    all_results <- rbind(
+      all_results,
+      data.table(
+        Experiment_ID = i,
+        Effect = diff(t_test$estimate),  # Difference in means
+        P_value = t_test$p.value,        # P-value
+        CI_Lower = t_test$conf.int[1],  # Lower bound of CI
+        CI_Upper = t_test$conf.int[2]   # Upper bound of CI
+      )
+    )
+    
+    # Update counters
+    if (t_test$p.value < alpha) {
+      false_positives <- false_positives + 1
+    } else {
+      true_negatives <- true_negatives + 1
+    }
+  }
+  
+  # Calculate summary statistics
+  fp_percentage <- (false_positives / num_experiments) * 100
+  tn_percentage <- (true_negatives / num_experiments) * 100
+  ci_mean_diff <- quantile(all_results$Effect, probs = c(0.025, 0.975))
+  
+  # Create summary table
+  simulation_summary <- data.frame(
+    Metric = c(
+      "True Difference in Means",
+      "Mean Estimated Difference",
+      "95% Confidence Interval for Difference (Lower Bound)",
+      "95% Confidence Interval for Difference (Upper Bound)",
+      "Percentage of False Positives",
+      "Percentage of True Negatives"
+    ),
+    Value = c(
+      effect_size,  # True difference (no effect)
+      mean(all_results$Effect),
+      ci_mean_diff[1],
+      ci_mean_diff[2],
+      fp_percentage,
+      tn_percentage
+    )
+  )
+  
+  return(list(all_results = all_results, summary = simulation_summary))
+}
+
+# Generate results for 1000 experiments with no effect (effect_size = 0)
+results <- generate_multiple_experiments(effect_size = 0, num_experiments = 1000, alpha = alpha)
+
+# Extract the summary and display it
+no_effect_summary <- results$summary
+cat("\n--- Simulation Summary: No Effect ---\n")
+print(no_effect_summary)
+# Display the experiment-level results interactively
+datatable(results$all_results)
+```
+
+
+### Q1 Effect
+
+```{r}
+# Load libraries
+library(data.table)
+library(DT)
+library(ggplot2)
+
+# Set parameters
+set.seed(123)  # Set seed for reproducibility
+n <- 800  # Sample size (400 per group)
+sd_sales <- 500  # Standard deviation
+alpha <- 0.05  # Significance level
+
+# Function to simulate multiple experiments with effect
+generate_multiple_experiments <- function(effect_size, num_experiments = 1000) {
+  # Initialize storage for all experiments
+  all_results <- data.table(
+    Experiment_ID = integer(),
+    Effect = numeric(),
+    P_value = numeric(),
+    CI_Lower = numeric(),
+    CI_Upper = numeric()
+  )
+
+  # Counters for false positives and true negatives
+  true_positives <- 0
+  false_negatives <- 0
+
+  # Run multiple experiments
+  for (i in 1:num_experiments) {
+    # Generate data for Treatment and Control groups
+    treatment_sales <- rnorm(n / 2, mean = 1000 + effect_size, sd = sd_sales)
+    control_sales <- rnorm(n / 2, mean = 1000, sd = sd_sales)
+
+    # Perform Welch's t-test
+    t_test <- t.test(treatment_sales, control_sales)
+
+    # Update counters
+    if (t_test$p.value < alpha) {
+      true_positives <- true_positives + 1
+    } else {
+      false_negatives <- false_negatives + 1
+    }
+
+    # Store results
+    all_results <- rbind(
+      all_results,
+      data.table(
+        Experiment_ID = i,
+        Effect = diff(t_test$estimate),  # Difference in means
+        P_value = t_test$p.value,        # P-value
+        CI_Lower = t_test$conf.int[1],  # Lower bound of CI
+        CI_Upper = t_test$conf.int[2]   # Upper bound of CI
+      )
+    )
+  }
+
+  # Calculate summary statistics
+  mean_effect <- mean(all_results$Effect)
+  ci_mean_diff <- quantile(all_results$Effect, probs = c(0.025, 0.975))
+  tp_percentage <- (true_positives / num_experiments) * 100
+  fn_percentage <- (false_negatives / num_experiments) * 100
+
+  # Create summary table
+  simulation_summary <- data.frame(
+    Metric = c(
+      "True Difference in Means",
+      "Mean Estimated Difference",
+      "95% Confidence Interval for Difference (Lower Bound)",
+      "95% Confidence Interval for Difference (Upper Bound)",
+      "Percentage of True Positives",
+      "Percentage of False Negatives"
+    ),
+    Value = c(
+      effect_size,  # True difference
+      mean_effect,
+      ci_mean_diff[1],
+      ci_mean_diff[2],
+      tp_percentage,
+      fn_percentage
+    )
+  )
+
+  return(list(results = all_results, summary = simulation_summary))
+}
+
+# Generate results for 1000 experiments with an effect (e.g., effect_size = 100)
+simulation_results <- generate_multiple_experiments(effect_size = 100, num_experiments = 1000)
+
+# Extract and display the summary table
+simulation_summary <- simulation_results$summary
+cat("\n--- Simulation Summary ---\n")
+print(simulation_summary)
+# Display the experiment-level results interactively
+datatable(simulation_results$results)
+```
+
+
+### Q2 No Effect
+
+```{r}
+# Load libraries
+library(data.table)
+library(DT)
+library(ggplot2)
+
+# Set parameters
+set.seed(123)  # For reproducibility
+n <- 800  # Sample size per group
+p_skippable_no_effect <- 0.33  # Subscription rate for skippable ads
+p_non_skippable_no_effect <- 0.33  # Subscription rate for non-skippable ads
+num_simulations <- 1000  # Number of simulations
+alpha <- 0.05  # Significance level
+
+# Function for "No Effect" Proportion Test
+simulate_no_effect_proportion <- function(p_skippable, p_non_skippable, n, num_simulations, alpha) {
+  # Initialize variables
+  prop_differences <- numeric(num_simulations)
+  p_values <- numeric(num_simulations)
+  false_positives <- 0
+  true_negatives <- 0
+
+  # Simulate multiple experiments
+  for (i in 1:num_simulations) {
+    # Generate data for Skippable and Non-Skippable groups
+    skippable <- rbinom(n, size = 1, prob = p_skippable)
+    non_skippable <- rbinom(n, size = 1, prob = p_non_skippable)
+    
+    # Perform proportion test
+    test_result <- prop.test(
+      x = c(sum(skippable), sum(non_skippable)),
+      n = c(length(skippable), length(non_skippable))
+    )
+    
+    # Store results
+    prop_differences[i] <- diff(test_result$estimate)  # Difference in proportions
+    p_values[i] <- test_result$p.value
+
+    # Update counters
+    if (test_result$p.value < alpha) {
+      false_positives <- false_positives + 1
+    } else {
+      true_negatives <- true_negatives + 1
+    }
+  }
+
+  # Calculate summary statistics
+  fp_percentage <- (false_positives / num_simulations) * 100
+  tn_percentage <- (true_negatives / num_simulations) * 100
+  ci_mean_diff <- quantile(prop_differences, probs = c(0.025, 0.975))
+
+  # Create summary table
+  simulation_summary <- data.frame(
+    Metric = c(
+      "True Difference in Proportions",
+      "Mean Estimated Difference",
+      "95% Confidence Interval for Difference (Lower Bound)",
+      "95% Confidence Interval for Difference (Upper Bound)",
+      "Percentage of False Positives",
+      "Percentage of True Negatives"
+    ),
+    Value = c(
+      0,  # True difference (no effect)
+      mean(prop_differences),
+      ci_mean_diff[1],
+      ci_mean_diff[2],
+      fp_percentage,
+      tn_percentage
+    )
+  )
+
+  return(list(summary = simulation_summary, differences = prop_differences, p_values = p_values))
+}
+
+# Run the simulation for "No Effect"
+no_effect_results <- simulate_no_effect_proportion(
+  p_skippable = p_skippable_no_effect,
+  p_non_skippable = p_non_skippable_no_effect,
+  n = n,
+  num_simulations = num_simulations,
+  alpha = alpha
+)
+
+# Extract the summary and display it
+no_effect_summary <- no_effect_results$summary
+cat("\n--- Simulation Summary: No Effect ---\n")
+print(no_effect_summary)
+# Create a data table for experiment-level results
+experiment_results <- data.table(
+  Experiment_ID = 1:num_simulations,
+  Prop_Difference = no_effect_results$differences,
+  P_value = no_effect_results$p_values
+)
+
+# Display the experiment-level results interactively
+datatable(experiment_results)
+```
+
+
+### Q2 Effect
+
+```{r}
+# Set parameters for "With Effect"
+set.seed(123)  # For reproducibility
+n <- 800  # Sample size per group
+p_skippable_with_effect <- 0.33  # Subscription rate for skippable ads
+p_non_skippable_with_effect <- 0.4  # Subscription rate for non-skippable ads (introduce effect)
+num_simulations <- 1000  # Number of simulations
+alpha <- 0.05  # Significance level
+
+# Function for "With Effect" Proportion Test
+simulate_with_effect_proportion <- function(p_skippable, p_non_skippable, n, num_simulations, alpha) {
+  # Initialize variables
+  prop_differences <- numeric(num_simulations)
+  p_values <- numeric(num_simulations)
+  true_positives <- 0
+  false_negatives <- 0
+
+  # Simulate multiple experiments
+  for (i in 1:num_simulations) {
+    # Generate data for Skippable and Non-Skippable groups
+    skippable <- rbinom(n, size = 1, prob = p_skippable)
+    non_skippable <- rbinom(n, size = 1, prob = p_non_skippable)
+    
+    # Perform proportion test
+    test_result <- prop.test(
+      x = c(sum(skippable), sum(non_skippable)),
+      n = c(length(skippable), length(non_skippable))
+    )
+    
+    # Store results
+    prop_differences[i] <- diff(test_result$estimate)  # Difference in proportions
+    p_values[i] <- test_result$p.value
+
+    # Update counters
+    if (test_result$p.value < alpha) {
+      true_positives <- true_positives + 1
+    } else {
+      false_negatives <- false_negatives + 1
+    }
+  }
+
+  # Calculate summary statistics
+  tp_percentage <- (true_positives / num_simulations) * 100
+  fn_percentage <- (false_negatives / num_simulations) * 100
+  ci_mean_diff <- quantile(prop_differences, probs = c(0.025, 0.975))
+
+  # Create summary table
+  simulation_summary <- data.frame(
+    Metric = c(
+      "True Difference in Proportions",
+      "Mean Estimated Difference",
+      "95% Confidence Interval for Difference (Lower Bound)",
+      "95% Confidence Interval for Difference (Upper Bound)",
+      "Percentage of True Positives",
+      "Percentage of False Negatives"
+    ),
+    Value = c(
+      p_non_skippable - p_skippable,  # True difference
+      mean(prop_differences),
+      ci_mean_diff[1],
+      ci_mean_diff[2],
+      tp_percentage,
+      fn_percentage
+    )
+  )
+
+  return(list(summary = simulation_summary, differences = prop_differences, p_values = p_values))
+}
+
+# Run the simulation for "With Effect"
+with_effect_results <- simulate_with_effect_proportion(
+  p_skippable = p_skippable_with_effect,
+  p_non_skippable = p_non_skippable_with_effect,
+  n = n,
+  num_simulations = num_simulations,
+  alpha = alpha
+)
+
+# Extract the summary and display it
+with_effect_summary <- with_effect_results$summary
+cat("\n--- Simulation Summary: With Effect ---\n")
+print(with_effect_summary)
+# Create a data table for experiment-level results
+experiment_results <- data.table(
+  Experiment_ID = 1:num_simulations,
+  Prop_Difference = with_effect_results$differences,
+  P_value = with_effect_results$p_values
+)
+
+# Display the experiment-level results interactively
+datatable(experiment_results)
+```
+
+
+### Q3 No Effect
+
+```{r}
+# Set parameters
+set.seed(123)
+n <- 482  # Sample size per group
+p_short_ad_no_effect <- 0.5  # Weekly online purchase frequency for 10s ads
+p_long_ad_no_effect <- 0.5  # Weekly online purchase frequency for 30s ads
+num_simulations <- 1000  # Number of simulations
+alpha <- 0.05  # Significance level
+
+# Function for "No Effect" Chi-Squared Test
+simulate_no_effect_chi_squared <- function(p_short_ad, p_long_ad, n, num_simulations, alpha) {
+  # Initialize variables
+  chi_squared_statistics <- numeric(num_simulations)
+  p_values <- numeric(num_simulations)
+  false_positives <- 0
+  true_negatives <- 0
+
+  # Simulate multiple experiments
+  for (i in 1:num_simulations) {
+    # Generate data for Short Ads and Long Ads groups
+    short_ads <- rbinom(n, size = 1, prob = p_short_ad)
+    long_ads <- rbinom(n, size = 1, prob = p_long_ad)
+    
+    # Create a contingency table
+    contingency_table <- matrix(
+      c(sum(short_ads), n - sum(short_ads),
+        sum(long_ads), n - sum(long_ads)),
+      nrow = 2,
+      byrow = TRUE
+    )
+    
+    # Perform Chi-Squared Test
+    test_result <- chisq.test(contingency_table, correct = FALSE)
+    
+    # Store results
+    chi_squared_statistics[i] <- test_result$statistic
+    p_values[i] <- test_result$p.value
+
+    # Update counters
+    if (test_result$p.value < alpha) {
+      false_positives <- false_positives + 1
+    } else {
+      true_negatives <- true_negatives + 1
+    }
+  }
+
+  # Calculate summary statistics
+  fp_percentage <- (false_positives / num_simulations) * 100
+  tn_percentage <- (true_negatives / num_simulations) * 100
+
+  # Create summary table
+  simulation_summary <- data.frame(
+    Metric = c(
+      "True Difference in Proportions",
+      "Mean Chi-Squared Statistic",
+      "Percentage of False Positives",
+      "Percentage of True Negatives"
+    ),
+    Value = c(
+      0,  # True difference (no effect)
+      mean(chi_squared_statistics),
+      fp_percentage,
+      tn_percentage
+    )
+  )
+
+  return(list(summary = simulation_summary, chi_squared_statistics = chi_squared_statistics, p_values = p_values))
+}
+
+# Run the simulation for "No Effect"
+no_effect_results <- simulate_no_effect_chi_squared(
+  p_short_ad = p_short_ad_no_effect,
+  p_long_ad = p_long_ad_no_effect,
+  n = n,
+  num_simulations = num_simulations,
+  alpha = alpha
+)
+
+# Extract the summary and display it
+no_effect_summary <- no_effect_results$summary
+cat("\n--- Simulation Summary: No Effect ---\n")
+print(no_effect_summary)
+# Create a data table for experiment-level results
+experiment_results <- data.table(
+  Experiment_ID = 1:num_simulations,
+  Chi_Squared_Statistic = no_effect_results$chi_squared_statistics,
+  P_value = no_effect_results$p_values
+)
+
+# Display the experiment-level results interactively
+datatable(experiment_results)
+```
+
+
+### Q3 Effect
+
+```{r}
+# Set parameters
+set.seed(123)
+n <- 482  # Sample size per group
+p_short_ad_with_effect <- 0.5  # Weekly online purchase frequency for 10s ads
+p_long_ad_with_effect <- 0.6  # Weekly online purchase frequency for 30s ads (higher, with effect)
+num_simulations <- 1000  # Number of simulations
+alpha <- 0.05  # Significance level
+
+# Function for "With Effect" Chi-Squared Test
+simulate_with_effect_chi_squared <- function(p_short_ad, p_long_ad, n, num_simulations, alpha) {
+  # Initialize variables
+  chi_squared_statistics <- numeric(num_simulations)
+  p_values <- numeric(num_simulations)
+  true_positives <- 0
+  false_negatives <- 0
+
+  # Simulate multiple experiments
+  for (i in 1:num_simulations) {
+    # Generate data for Short Ads and Long Ads groups
+    short_ads <- rbinom(n, size = 1, prob = p_short_ad)
+    long_ads <- rbinom(n, size = 1, prob = p_long_ad)
+    
+    # Create a contingency table
+    contingency_table <- matrix(
+      c(sum(short_ads), n - sum(short_ads),
+        sum(long_ads), n - sum(long_ads)),
+      nrow = 2,
+      byrow = TRUE
+    )
+    
+    # Perform Chi-Squared Test
+    test_result <- chisq.test(contingency_table, correct = FALSE)
+    
+    # Store results
+    chi_squared_statistics[i] <- test_result$statistic
+    p_values[i] <- test_result$p.value
+
+    # Update counters
+    if (test_result$p.value < alpha) {
+      true_positives <- true_positives + 1
+    } else {
+      false_negatives <- false_negatives + 1
+    }
+  }
+
+  # Calculate summary statistics
+  tp_percentage <- (true_positives / num_simulations) * 100
+  fn_percentage <- (false_negatives / num_simulations) * 100
+
+  # Create summary table
+  simulation_summary <- data.frame(
+    Metric = c(
+      "True Difference in Proportions",
+      "Mean Chi-Squared Statistic",
+      "Percentage of True Positives",
+      "Percentage of False Negatives"
+    ),
+    Value = c(
+      p_long_ad - p_short_ad,  # True difference
+      mean(chi_squared_statistics),
+      tp_percentage,
+      fn_percentage
+    )
+  )
+
+  return(list(summary = simulation_summary, chi_squared_statistics = chi_squared_statistics, p_values = p_values))
+}
+
+# Run the simulation for "With Effect"
+with_effect_results <- simulate_with_effect_chi_squared(
+  p_short_ad = p_short_ad_with_effect,
+  p_long_ad = p_long_ad_with_effect,
+  n = n,
+  num_simulations = num_simulations,
+  alpha = alpha
+)
+
+# Extract the summary and display it
+with_effect_summary <- with_effect_results$summary
+cat("\n--- Simulation Summary: With Effect ---\n")
+print(with_effect_summary)
+# Create a data table for experiment-level results
+experiment_results <- data.table(
+  Experiment_ID = 1:num_simulations,
+  Chi_Squared_Statistic = with_effect_results$chi_squared_statistics,
+  P_value = with_effect_results$p_values
+)
+
+# Display the experiment-level results interactively
+datatable(experiment_results)
+```
+
+### Table
+
+```{r}
+library(knitr)
+
+# Updated data frame with new values
+data <- data.frame(
+  Research_Question = c("Question 1", "Question 1", "Question 2", "Question 2", "Question 3", "Question 3"),
+  Scenario = c(1, 2, 1, 2, 1, 2),
+  Effect = c("No", "Expected: 10%", "No", "Expected: 7%", "No", "Expected: 10%"),
+  Percentage_of_False_Positives = c(5.6, NA, 4.8, NA, 5.7, NA),
+  Percentage_of_True_Negatives = c(94.4, NA, 95.2, NA, 94.3, NA),
+  Percentage_of_False_Negatives = c(NA, 18.5, NA, 18.6, NA, 11.7),
+  Percentage_of_True_Positives = c(NA, 81.5, NA, 81.4, NA, 88.3)
+)
+
+# Display updated table
+kable(data, caption = "Simulated Data Summary")
+```
+
